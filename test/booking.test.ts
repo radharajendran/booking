@@ -23,6 +23,17 @@ const GUEST_B_UNIT_1 = {
     numberOfNights: 5,
 };
 
+const GUEST_C_UNIT_1 = {
+    unitID: '1',
+    guestName: 'GuestC',
+    checkInDate: new Date(new Date().getTime() + 144 * 60 * 60 * 1000),
+    numberOfNights: 5,
+};
+
+const GUEST_A_UNIT_1_EXTEND = {
+    numberOfNights: 5,
+};
+
 const prisma = new PrismaClient();
 
 beforeEach(async () => {
@@ -52,7 +63,7 @@ describe('Booking API', () => {
 
     test('Same guest same unit booking', async () => {
         // Create first booking
-        const response1 = await axios.post('http://localhost:8000/api/v1/booking', GUEST_A_UNIT_1);
+        const response1 = await axios.post('http://localhost:8000/api/v2/booking', GUEST_A_UNIT_1);
         expect(response1.status).toBe(200);
         expect(response1.data.guestName).toBe(GUEST_A_UNIT_1.guestName);
         expect(response1.data.unitID).toBe(GUEST_A_UNIT_1.unitID);
@@ -60,7 +71,7 @@ describe('Booking API', () => {
         // Guests want to book the same unit again
         let error: any;
         try {
-            await axios.post('http://localhost:8000/api/v1/booking', GUEST_A_UNIT_1);
+            await axios.post('http://localhost:8000/api/v2/booking', GUEST_A_UNIT_1);
         } catch (e) {
             error = e;
         }
@@ -72,7 +83,7 @@ describe('Booking API', () => {
 
     test('Same guest different unit booking', async () => {
         // Create first booking
-        const response1 = await axios.post('http://localhost:8000/api/v1/booking', GUEST_A_UNIT_1);
+        const response1 = await axios.post('http://localhost:8000/api/v2/booking', GUEST_A_UNIT_1);
         expect(response1.status).toBe(200);
         expect(response1.data.guestName).toBe(GUEST_A_UNIT_1.guestName);
         expect(response1.data.unitID).toBe(GUEST_A_UNIT_1.unitID);
@@ -80,7 +91,7 @@ describe('Booking API', () => {
         // Guest wants to book another unit
         let error: any;
         try {
-            await axios.post('http://localhost:8000/api/v1/booking', GUEST_A_UNIT_2);
+            await axios.post('http://localhost:8000/api/v2/booking', GUEST_A_UNIT_2);
         } catch (e) {
             error = e;
         }
@@ -100,7 +111,7 @@ describe('Booking API', () => {
         // GuestB trying to book a unit that is already occupied
         let error: any;
         try {
-            await axios.post('http://localhost:8000/api/v1/booking', GUEST_B_UNIT_1);
+            const result = await axios.post('http://localhost:8000/api/v2/booking', GUEST_B_UNIT_1);
         } catch (e) {
             error = e;
         }
@@ -112,19 +123,68 @@ describe('Booking API', () => {
 
     test('Different guest same unit booking different date', async () => {
         // Create first booking
-        const response1 = await axios.post('http://localhost:8000/api/v1/booking', GUEST_A_UNIT_1);
+        const response1 = await axios.post('http://localhost:8000/api/v2/booking', GUEST_A_UNIT_1);
         expect(response1.status).toBe(200);
         expect(response1.data.guestName).toBe(GUEST_A_UNIT_1.guestName);
 
         // GuestB trying to book a unit that is already occupied
-        const response2 = await axios.post('http://localhost:8000/api/v1/booking', {
-            unitID: '1',
-            guestName: 'GuestB',
-            checkInDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            numberOfNights: 5
-        });
+        try {
+            const response2 = await axios.post('http://localhost:8000/api/v2/booking', {
+                unitID: '1',
+                guestName: 'GuestB',
+                checkInDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                numberOfNights: 5
+            });
+            expect(response2).toBeInstanceOf(AxiosError);
+        }
+        catch (error: any) {
+            expect(error).toBeInstanceOf(AxiosError);
+            expect(error.response.status).toBe(400);
+            expect(error.response.data).toBe('For the given check-in date, the unit is already occupied');
+        }
+    });
 
-        expect(response2.status).toBe(400);
-        expect(response2.data.detail).toBe('For the given check-in date, the unit is already occupied');
+    test('Extend Booking for available dates', async () => {
+        // Create first booking
+        const response1 = await axios.post('http://localhost:8000/api/v2/booking', GUEST_A_UNIT_1);
+
+        expect(response1.status).toBe(200);
+        expect(response1.data.guestName).toBe(GUEST_A_UNIT_1.guestName);
+        const bookingId = response1.data.id
+
+        // GuestB trying to extend the stay
+        const response2 = await axios.patch(`http://localhost:8000/api/v2/booking/extend/${bookingId}`, {
+            numberOfNights: GUEST_A_UNIT_1_EXTEND.numberOfNights
+        });
+        expect(response2.status).toBe(200);
+        expect(response2.data.numberOfNights).toBe(GUEST_A_UNIT_1.numberOfNights + GUEST_A_UNIT_1_EXTEND.numberOfNights);
+    });
+
+    test('Extend Booking for un-available dates', async () => {
+        // Create first booking
+        const response1 = await axios.post('http://localhost:8000/api/v2/booking', GUEST_A_UNIT_1);
+
+        expect(response1.status).toBe(200);
+        expect(response1.data.guestName).toBe(GUEST_A_UNIT_1.guestName);
+        const bookingId = response1.data.id
+
+        //create second booking
+        const response2 = await axios.post('http://localhost:8000/api/v2/booking', GUEST_C_UNIT_1);
+
+        expect(response2.status).toBe(200);
+        expect(response2.data.guestName).toBe(GUEST_C_UNIT_1.guestName);
+        console.log('bookingId-----', bookingId)
+
+        try {
+            const response3 = await axios.patch(`http://localhost:8000/api/v2/booking/extend/${bookingId}`, {
+                numberOfNights: GUEST_A_UNIT_1_EXTEND.numberOfNights
+            });
+            expect(response2).toBeInstanceOf(AxiosError);
+        }
+        catch (error: any) {
+            expect(error).toBeInstanceOf(AxiosError);
+            expect(error.response.status).toBe(400);
+            expect(error.response.data.reason).toBe('For the given extend stay, the unit is already occupied');
+        }
     });
 });

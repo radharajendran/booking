@@ -1,7 +1,9 @@
 import http from 'http';
 import express, { Express, NextFunction, Request, Response } from 'express';
 import morgan from 'morgan';
-import routes from './routes/bookings';
+import v1 from './routes/v1/bookings';
+import v2 from './routes/v2/bookings';
+
 import prisma from './prisma';
 
 export const app: Express = express();
@@ -10,7 +12,7 @@ export const app: Express = express();
 app.use(morgan('dev'));
 
 // Parse the request
-app.use(express.urlencoded({extended: false}));
+app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 // Swagger
@@ -20,7 +22,9 @@ app.use('/api-docs', swaggerUi.serve);
 app.get('/api-docs', swaggerUi.setup(swaggerDocument));
 
 // Routes
-app.use('/', routes);
+//app.use('/', routes);
+app.use('/api/v2', v2);
+app.use('/api/v1', v1);
 
 // Error handling
 app.use((req: Request, res: Response, next: NextFunction) => {
