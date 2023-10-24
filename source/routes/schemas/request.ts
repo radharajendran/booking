@@ -19,10 +19,7 @@ export const createBooking = z.object({
 
 export const extendStay = z.object({
     body: z.object({
-        id: z.number({
-            required_error: 'Booking id is required'
-        }),
-        additionalNights: z.number({
+        numberOfNights: z.number({
             required_error: 'Number Of additional nights is required'
         }).min(1)
     }),

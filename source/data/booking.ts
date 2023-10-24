@@ -93,7 +93,6 @@ export const findOverlapBooking = async (booking: Booking) => {
     `;
 
     const overlapBookings: Booking[] = await prisma.$queryRawUnsafe(sql);
-    console.log('overlapBookings----->', overlapBookings, booking)
 
     return overlapBookings
 }
