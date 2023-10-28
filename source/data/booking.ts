@@ -18,7 +18,7 @@ export const update = async (id: number, numberOfNights: number, additionalStay:
             id: id
         },
         data: {
-            numberOfNights: numberOfNights + additionalStay,
+            numberOfNights: numberOfNights,
         }
     });
 }
