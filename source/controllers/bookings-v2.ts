@@ -69,6 +69,7 @@ const extendBooking = async (req: Request, res: Response, next: NextFunction) =>
     }
 
     // check 2 : Unit is available for the Extended Stay
+    booking.numberOfNights = extendBooking.numberOfNights + booking.numberOfNights;
     let isOverlapBookings = await findOverlapBooking(booking);
     isOverlapBookings = isOverlapBookings.filter((b: any) => b.id != bookingId);
 
